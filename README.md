@@ -7,6 +7,10 @@ Transform research papers into executable Jupyter notebooks in seconds. Powered 
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![Next.js](https://img.shields.io/badge/next.js-14-black)
 
+## 🎬 Demo
+
+<video src="frontend/public/paper2notebook.mov" controls width="100%"></video>
+
 ## 🚀 Features
 
 - **📄 PDF to Notebook Conversion**: Upload research papers and get runnable PyTorch notebooks
@@ -81,36 +85,6 @@ npm run dev
 
 The frontend will be available at `http://localhost:3000`
 
-## 🌐 Deployment
-
-### Railway Deployment
-
-This project is designed to deploy on Railway with two separate services:
-
-#### Deploy Backend
-1. Create new Railway project
-2. Connect your GitHub repository
-3. Set root directory to `/backend`
-4. Add environment variable: `GEMINI_API_KEY=your_key_here`
-5. Deploy
-6. Copy the backend URL
-
-#### Deploy Frontend
-1. In the same Railway project, add a new service
-2. Connect the same GitHub repository
-3. Set root directory to `/frontend`
-4. Add environment variable: `NEXT_PUBLIC_API_URL=your_backend_url`
-5. Deploy
-
-### Vercel Deployment (Frontend Only)
-
-```bash
-cd frontend
-vercel --prod
-```
-
-Set environment variable: `NEXT_PUBLIC_API_URL=your_backend_url`
-
 ## 📖 Usage
 
 1. **Upload a Paper**: Drag and drop a PDF or paste an arXiv URL
@@ -155,15 +129,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License.
 
-## 👥 Authors
-
-- Raj Abhijit Dandekar - [GitHub](https://github.com/VizuaraAI)
-
-## 🙏 Acknowledgments
-
-- Powered by Google Gemini 2.5 Pro
-- Built with ❤️ for the research community
-- Special thanks to all contributors and users
 
 ## 📧 Contact
 
@@ -171,7 +136,6 @@ For any queries, mail us at: [raj.dandekar8@gmail.com](mailto:raj.dandekar8@gmai
 
 ## 🔗 Links
 
-- **Live Demo**: [paper2notebook.vizuara.ai](https://paper2notebook.vizuara.ai)
 - **GitHub**: [VizuaraAI/paper-to-notebook](https://github.com/VizuaraAI/paper-to-notebook)
 - **Other Products**:
   - [Vizz-AI](https://vizz.vizuara.ai) - Personalized AI tutor
