@@ -39,47 +39,112 @@ function formatAuthors(authors: any[]): string {
   return names.join(', ')
 }
 
-async function scrapeTrendingPapers(period: Period): Promise<PaperEntry[]> {
-  const url = `https://huggingface.co/papers/trending?period=${period}`
-  const res = await fetch(url, {
-    headers: {
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'User-Agent': 'Mozilla/5.0 (compatible; paper2notebook/1.0)',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  })
+function mapItem(item: any): PaperEntry | null {
+  const paper = item?.paper
+  if (!paper?.id || !paper?.title) return null
+  return {
+    id: paper.id,
+    title: paper.title,
+    abstract: paper.summary || item.summary || '',
+    authors: formatAuthors(paper.authors || []),
+    publishedAt: (paper.publishedAt || item.publishedAt || '').slice(0, 10),
+    upvotes: paper.upvotes || 0,
+    githubUrl: paper.githubRepo || '',
+    githubStars: paper.githubStars || 0,
+    keywords: (paper.ai_keywords || []).slice(0, 3) as string[],
+    arxivUrl: `https://arxiv.org/abs/${paper.id}`,
+    hfUrl: `https://huggingface.co/papers/${paper.id}`,
+    thumbnail: item.thumbnail || '',
+  }
+}
 
-  if (!res.ok) throw new Error(`HF trending page fetch failed: ${res.status}`)
-
-  const html = await res.text()
-
-  // Extract from Svelte HYDRATER div: data-target="DailyPapers" data-props="..."
-  const match = html.match(/data-target="DailyPapers"\s+data-props="([^"]*)"/)
-  if (!match) throw new Error('Could not find DailyPapers data-props in HTML')
-
-  const propsJson = decodeHtmlEntities(match[1])
-  const props = JSON.parse(propsJson)
-  const dailyPapers: any[] = props.dailyPapers || props.papers || []
-
-  return dailyPapers
-    .filter((item: any) => item.paper?.id && item.paper?.title)
-    .map((item: any): PaperEntry => {
-      const paper = item.paper
-      return {
-        id: paper.id,
-        title: paper.title,
-        abstract: paper.summary || item.summary || '',
-        authors: formatAuthors(paper.authors || []),
-        publishedAt: (paper.publishedAt || item.publishedAt || '').slice(0, 10),
-        upvotes: paper.upvotes || 0,
-        githubUrl: paper.githubRepo || '',
-        githubStars: paper.githubStars || 0,
-        keywords: (paper.ai_keywords || []).slice(0, 3) as string[],
-        arxivUrl: `https://arxiv.org/abs/${paper.id}`,
-        hfUrl: `https://huggingface.co/papers/${paper.id}`,
-        thumbnail: item.thumbnail || '',
-      }
+// Fetch a single day from HF daily_papers API
+async function fetchDay(date: string): Promise<any[]> {
+  try {
+    const res = await fetch(`https://huggingface.co/api/daily_papers?date=${date}`, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'paper2notebook/1.0' },
     })
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
+// Scrape HF trending HTML for today (has best quality data + GitHub stars)
+async function scrapeTodayTrending(): Promise<any[]> {
+  try {
+    const res = await fetch('https://huggingface.co/papers/trending', {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (compatible; paper2notebook/1.0)',
+      },
+    })
+    if (!res.ok) return []
+    const html = await res.text()
+    const match = html.match(/data-target="DailyPapers"\s+data-props="([^"]*)"/)
+    if (!match) return []
+    const props = JSON.parse(decodeHtmlEntities(match[1]))
+    return props.dailyPapers || []
+  } catch {
+    return []
+  }
+}
+
+// Aggregate multiple days, deduplicate, sort by githubStars then upvotes
+function aggregateAndSort(items: any[]): PaperEntry[] {
+  const paperMap = new Map<string, PaperEntry>()
+  for (const item of items) {
+    const entry = mapItem(item)
+    if (!entry) continue
+    const existing = paperMap.get(entry.id)
+    // Keep the version with highest githubStars
+    if (!existing || entry.githubStars > existing.githubStars) {
+      paperMap.set(entry.id, entry)
+    }
+  }
+  return Array.from(paperMap.values())
+    .sort((a, b) => b.githubStars - a.githubStars || b.upvotes - a.upvotes)
+}
+
+function getPastDates(days: number): string[] {
+  const dates: string[] = []
+  for (let i = 0; i < days; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    dates.push(d.toISOString().slice(0, 10))
+  }
+  return dates
+}
+
+async function fetchTrendingForPeriod(period: Period): Promise<PaperEntry[]> {
+  if (period === 'day') {
+    // Try HTML scrape first (richer data), fall back to daily API
+    let items = await scrapeTodayTrending()
+    if (items.length === 0) {
+      const today = new Date().toISOString().slice(0, 10)
+      items = await fetchDay(today)
+    }
+    return aggregateAndSort(items)
+  }
+
+  if (period === 'week') {
+    // Last 7 days
+    const dates = getPastDates(7)
+    const results = await Promise.all(dates.map(fetchDay))
+    return aggregateAndSort(results.flat())
+  }
+
+  // month — last 30 days
+  const dates = getPastDates(30)
+  // Fetch in batches of 10 to avoid hammering the API
+  const allItems: any[] = []
+  for (let i = 0; i < dates.length; i += 10) {
+    const batch = dates.slice(i, i + 10)
+    const results = await Promise.all(batch.map(fetchDay))
+    allItems.push(...results.flat())
+  }
+  return aggregateAndSort(allItems)
 }
 
 export async function GET(request: NextRequest) {
@@ -92,11 +157,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const papers = await scrapeTrendingPapers(period)
+    const papers = await fetchTrendingForPeriod(period)
     _cache.set(period, { papers, ts: Date.now() })
     return NextResponse.json({ papers })
   } catch (err) {
-    console.error('HF trending papers error:', err)
+    console.error('Trending papers error:', err)
     // Stale cache fallback
     const stale = _cache.get(period)
     if (stale) return NextResponse.json({ papers: stale.papers })

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import clsx from 'clsx'
+import { RainbowButton } from '@/components/ui/rainbow-button'
 
 // Helper for class merging
 function cn(...inputs: (string | undefined | null | false)[]) {
@@ -253,6 +254,31 @@ const Hero = () => (
   </motion.div>
 )
 
+function TrendingButton({ onClick }: { onClick: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 1 }}
+      className="relative group/trendbtn z-[60]"
+    >
+      <RainbowButton onClick={onClick} className="flex items-center gap-2 text-sm h-9 px-5 rounded-full">
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+          <polyline points="17 6 23 6 23 12" />
+        </svg>
+        Trending Papers
+        <ChevronDown className="w-3.5 h-3.5" />
+      </RainbowButton>
+      {/* Hover tooltip */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-60 bg-[#111]/95 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 text-xs text-white/70 leading-relaxed shadow-2xl z-50 pointer-events-none opacity-0 group-hover/trendbtn:opacity-100 transition-opacity duration-150 text-center whitespace-normal">
+        Browse today's trending papers - click any to convert to a runnable notebook
+        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#111] border-l border-t border-white/15 rotate-45" />
+      </div>
+    </motion.div>
+  )
+}
+
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [arxivUrl, setArxivUrl] = useState('')
@@ -279,6 +305,8 @@ export default function Home() {
   const [trendingPapers, setTrendingPapers] = useState<TrendingPaper[]>([])
   const [trendingLoading, setTrendingLoading] = useState(true)
   const [trendingPeriod, setTrendingPeriod] = useState<'day' | 'week' | 'month'>('day')
+  const [trendingSort, setTrendingSort] = useState<'stars' | 'new'>('stars')
+  const trendingSectionRef = useRef<HTMLElement>(null)
   const arxivInputRef = useRef<HTMLInputElement>(null)
 
   // Paper info for engaging wait experience
@@ -656,6 +684,9 @@ export default function Home() {
 
       <div className="container mx-auto px-4 pt-16 pb-6 relative z-10 max-w-6xl">
         <Hero />
+        <div className="flex justify-center mb-6 -mt-2 relative z-[60]">
+          <TrendingButton onClick={() => trendingSectionRef.current?.scrollIntoView({ behavior: 'smooth' })} />
+        </div>
 
         {/* Main Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1253,6 +1284,7 @@ export default function Home() {
 
       {/* Trending Papers — full width */}
       <motion.section
+          ref={trendingSectionRef}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
@@ -1264,21 +1296,43 @@ export default function Home() {
             <span className="text-[11px] bg-[#8ad4ff]/10 text-[#8ad4ff] border border-[#8ad4ff]/20 px-2.5 py-0.5 rounded-full font-medium">
               HuggingFace
             </span>
-            {/* Period tabs */}
-            <div className="ml-auto flex items-center gap-1 bg-white/5 rounded-xl p-1">
-              {(['day', 'week', 'month'] as const).map((p) => (
+            <div className="ml-auto flex items-center gap-2">
+              {/* Sort by stars toggle */}
+              <div className="relative group/tip">
                 <button
-                  key={p}
-                  onClick={() => setTrendingPeriod(p)}
-                  className={`text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all ${
-                    trendingPeriod === p
-                      ? 'bg-[#8ad4ff]/20 text-[#8ad4ff] border border-[#8ad4ff]/30'
-                      : 'text-white/40 hover:text-white/70'
+                  onClick={() => setTrendingSort(s => s === 'stars' ? 'new' : 'stars')}
+                  className={`p-2 rounded-lg transition-all ${
+                    trendingSort === 'stars'
+                      ? 'bg-[#8ad4ff]/20 border border-[#8ad4ff]/30'
+                      : 'bg-white/5 hover:bg-white/10 border border-transparent'
                   }`}
+                  title={trendingSort === 'stars' ? 'Sorted by GitHub stars' : 'Sorted by newest'}
                 >
-                  {p === 'day' ? 'Daily' : p === 'week' ? 'Weekly' : 'Monthly'}
+                  <svg className={`w-4 h-4 transition-colors ${trendingSort === 'stars' ? 'text-[#8ad4ff]' : 'text-white/40'}`} viewBox="0 0 24 24" fill={trendingSort === 'stars' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
                 </button>
-              ))}
+                <div className="absolute right-0 top-full mt-2 w-56 bg-[#111] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white/70 leading-relaxed shadow-xl z-20 pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150">
+                  {trendingSort === 'stars' ? 'Sorted by GitHub stars — click for newest first' : 'Sorted by newest — click for GitHub stars'}
+                  <div className="absolute -top-1.5 right-3 w-3 h-3 bg-[#111] border-l border-t border-white/10 rotate-45" />
+                </div>
+              </div>
+              {/* Period tabs */}
+              <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
+                {(['day', 'week', 'month'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setTrendingPeriod(p)}
+                    className={`text-xs font-medium px-3.5 py-1.5 rounded-lg transition-all ${
+                      trendingPeriod === p
+                        ? 'bg-[#8ad4ff]/20 text-[#8ad4ff] border border-[#8ad4ff]/30'
+                        : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    {p === 'day' ? 'Daily' : p === 'week' ? 'Weekly' : 'Monthly'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1288,7 +1342,13 @@ export default function Home() {
             </div>
           ) : trendingPapers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trendingPapers.map(paper => (
+              {[...trendingPapers]
+                .sort((a, b) =>
+                  trendingSort === 'stars'
+                    ? (b.githubStars - a.githubStars) || (b.upvotes - a.upvotes)
+                    : (b.publishedAt > a.publishedAt ? 1 : -1)
+                )
+                .map(paper => (
                 <PaperCard key={paper.id} paper={paper} onConvert={handleConvertPaper} />
               ))}
             </div>

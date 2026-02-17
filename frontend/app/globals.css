@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-1: 40 100% 77%;   /* #ffd78a amber-gold */
+  --color-2: 300 100% 83%;  /* #ffa8ff pink */
+  --color-3: 205 100% 77%;  /* #8ad4ff sky-blue */
+  --color-4: 270 80% 75%;   /* purple */
+  --color-5: 220 90% 72%;   /* indigo-blue */
+}
+
 * {
   margin: 0;
   padding: 0;
