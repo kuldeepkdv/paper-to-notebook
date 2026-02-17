@@ -270,11 +270,6 @@ function TrendingButton({ onClick }: { onClick: () => void }) {
         Trending Papers
         <ChevronDown className="w-3.5 h-3.5" />
       </RainbowButton>
-      {/* Hover tooltip */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-60 bg-[#111]/95 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 text-xs text-white/70 leading-relaxed shadow-2xl z-50 pointer-events-none opacity-0 group-hover/trendbtn:opacity-100 transition-opacity duration-150 text-center whitespace-normal">
-        Browse today's trending papers - click any to convert to a runnable notebook
-        <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#111] border-l border-t border-white/15 rotate-45" />
-      </div>
     </motion.div>
   )
 }
@@ -637,6 +632,12 @@ export default function Home() {
     }
   }
 
+  // Lock body scroll when panel is expanded
+  useEffect(() => {
+    document.body.style.overflow = panelExpanded ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [panelExpanded])
+
   const handleComplete = (jobId: string) => {
     setFinalJobId(jobId)
     setCompletedSteps([true, true, true, true])
@@ -847,12 +848,12 @@ export default function Home() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            className={panelExpanded ? "fixed top-4 bottom-4 left-[24%] w-[52%] z-50" : "relative"}
+            className={panelExpanded ? "fixed top-4 bottom-4 left-[24%] w-[52%] z-[90]" : "relative"}
           >
             {panelExpanded && (
-              <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setPanelExpanded(false)} />
+              <div className="fixed inset-0 z-[80] bg-black/60" onClick={() => setPanelExpanded(false)} />
             )}
-            <div className={`rounded-2xl p-[2px] bg-gradient-to-r from-[#ffd78a] via-[#8ad4ff] to-[#ffa8ff] shadow-2xl relative z-50 ${panelExpanded ? "h-full flex flex-col" : ""}`}>
+            <div className={`rounded-2xl p-[2px] bg-gradient-to-r from-[#ffd78a] via-[#8ad4ff] to-[#ffa8ff] shadow-2xl relative z-[90] ${panelExpanded ? "h-full flex flex-col" : ""}`}>
               <div className={`rounded-[14px] bg-[#0a0a0a] backdrop-blur-xl overflow-hidden relative ${panelExpanded ? "flex-1 flex flex-col" : "h-full min-h-[650px]"}`}>
 
                 {/* Expand / Collapse button */}
@@ -1306,7 +1307,6 @@ export default function Home() {
                       ? 'bg-[#8ad4ff]/20 border border-[#8ad4ff]/30'
                       : 'bg-white/5 hover:bg-white/10 border border-transparent'
                   }`}
-                  title={trendingSort === 'stars' ? 'Sorted by GitHub stars' : 'Sorted by newest'}
                 >
                   <svg className={`w-4 h-4 transition-colors ${trendingSort === 'stars' ? 'text-[#8ad4ff]' : 'text-white/40'}`} viewBox="0 0 24 24" fill={trendingSort === 'stars' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
